@@ -1,0 +1,147 @@
+---
+title: "quickerstats"
+author: "Aaron Anderson, 2019-10-08"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{quickerstats}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+NOT_CRAN <- identical(tolower(Sys.getenv("NOT_CRAN")), "true")
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  purl = NOT_CRAN
+)
+```
+
+## Introduction
+The USDA's National Agricultural Statistics Service collects a wide variety of
+data on US agriculture. They maintain a web tool (Quick Stats), and an API for 
+accessing the data. While powerful and flexible, both of the existing tools for 
+pulling data can be cumbersome for many users. The goal of quickerstats is to 
+functionality for pulling data that is easier to use. The package does this in 
+two ways:
+
+* Provide a search tool. An important parameter of the Quick Stats is 
+'short_desc' (called Data Item in the web tool), which is a concatenation six 
+other parameters (commodity_desc, class_desc, prodn_practice_desc, 
+util_practice_desc, statisticcat_desc, and unit_desc). A typical workflow would 
+be to drill down into each of these categories to build the desired short_desc 
+string. The problem is that the available options for each successive parameter 
+depend on the which values have already been chosen. Therefore, it is easiest to 
+simply search the available short_desc strings for what you want. Since there 
+are so many short_desc options, quickerstats provides a search function so you 
+can find what you want.
+
+* Provide easy to use functions for pulling state and county data. Most users 
+will be pulling state or county-level data. We streamline the workflow by 
+providing functionality for only these two options (using FIPS codes). Users can 
+access  a particular data item for a single state or all states. Additionally, 
+users can access a data item for all counties in the country, all counties in a 
+state, or a single county.
+
+See: <br/>
+https://quickstats.nass.usda.gov/ <br/>
+https://quickstats.nass.usda.gov/api
+
+## Installation and setup
+
+``` {r, eval = FALSE}
+devtools::install_github('anderaa/quickerstats', force=TRUE, build_vignettes=TRUE)
+```
+
+```{r, eval = NOT_CRAN}
+library('quickerstats')
+```
+
+You will need an API key from NASS. Go to https://quickstats.nass.usda.gov/api.
+I recommend storing your key as an environmental variable. To do so, in your
+console type:
+```
+file.edit("~/.Renviron")
+```
+And then add a line to this file:
+```
+NASS_KEY='your_nass_key'
+```
+Save the file, and restart your R session.
+You can now access the variable with:
+```{r, eval = NOT_CRAN}
+key <- Sys.getenv('NASS_KEY')
+```
+
+## Search for a data item
+
+Search for a data item like this:
+```{r, eval = NOT_CRAN}
+items <- search_data_items(key=key, search_terms=c('corn', 'harvested'), exclude=c('sweet'))
+print(items[1:5])
+```
+This will give you a list of data items. Each will contain all of the 
+search terms and none of the exclude terms. The exclude argument is optional. A
+typical workflow would be to start broad, view results, then incrementally
+narrow your search using both arguments. Note that the search terms are not case
+sensitive - the function handles this automatically.
+
+You can also retrieve options associated with a data item:
+``` {r, message = FALSE, eval = NOT_CRAN}
+df <- get_options(key=key, data_item='CORN, GRAIN - ACRES HARVESTED')
+print(head(df, 5))
+```
+
+## Retrieve data
+Once you have found your desired data item, you can pull data in one of five 
+ways:
+
+#### 1. Pull state-level data for all states
+To pull data for all states, the fips argument must be set to 'all':
+``` {r, message = FALSE, eval = NOT_CRAN}
+df <- get_state_data(key=key, year=2017, data_item='CORN, GRAIN - ACRES HARVESTED', fips='all')
+print(head(df, 5))
+```
+
+#### 2. Pull state-level data for a single state
+To pull data for a single county, the fips argument must be passed a 
+2-character string that is the state FIPS code:
+``` {r, message = FALSE, eval = NOT_CRAN}
+df <- get_state_data(key=key, year=2017, data_item='CORN, GRAIN - ACRES HARVESTED', fips='08')
+print(head(df, 5))
+```
+
+#### 3. Pull county-level data for all counties in the US
+As in the state example, set fips to 'all':
+``` {r, message = FALSE, eval = NOT_CRAN}
+df <- get_county_data(key=key, year=2017, data_item='CORN, GRAIN - ACRES HARVESTED', fips='all')
+print(head(df, 5))
+```
+
+#### 4. Pull county-level data for all counties in a single state
+To get data for counties in a state, fips must be the 2-character fips code of 
+the desired state:
+``` {r, message = FALSE, eval = NOT_CRAN}
+df <- get_county_data(key=key, year=2017, data_item='CORN, GRAIN - ACRES HARVESTED', fips='08')
+print(head(df, 5))
+```
+
+#### 5. Pull county-level data for a single county
+Simple pass fips a 5-character FIPS code for the county:
+``` {r, message = FALSE, eval = NOT_CRAN}
+df <- get_county_data(key=key, year=2017, data_item='CORN, GRAIN - ACRES HARVESTED', fips='08069')
+print(head(df, 5))
+```
+
+## Function documentation
+``` {r, eval = FALSE}
+?search_data_items
+?get_options
+?get_county_item_count
+?get_county_data
+?get_state_item_count
+?get_state_data
+```
+
+
+
